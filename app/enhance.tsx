@@ -1,14 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-
-/**
- * Client-side progressive enhancement for the static documentation body:
- * theme toggle, mobile nav, copy buttons, lightweight syntax highlighting, and
- * scrollspy for both nav rails. It operates on the DOM produced by the
- * `dangerouslySetInnerHTML` content, so it's the same code that ran as an inline
- * <script> in the single-file version — just typed and lifecycle-managed.
- */
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 
 const LANG_LABELS: Record<string, string> = {
   ts: 'TypeScript',
@@ -66,35 +59,35 @@ function highlight(code: string, lang: string): string {
     if (m[1]) out += '<span class="t-com">' + esc(m[1]) + '</span>';
     else out += '<span class="t-str">' + esc(m[2]) + '</span>';
     last = master.lastIndex;
-    if (m.index === master.lastIndex) master.lastIndex++; // guard empty match
+    if (m.index === master.lastIndex) master.lastIndex++;
   }
   out += segment(code.slice(last), lang);
   return out;
 }
 
-function enhance(): void {
+let scrollObserver: IntersectionObserver | null = null;
+
+function enhanceShell(): void {
   const root = document.documentElement;
   const body = document.body;
 
-  // ---- theme toggle (shares the 'pulse-theme' key with the Pulse app) ------
   document.getElementById('themebtn')?.addEventListener('click', () => {
     const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
     root.dataset.theme = next;
     try {
       localStorage.setItem('pulse-theme', next);
-    } catch {
-      /* storage may be blocked */
-    }
+    } catch {}
   });
 
-  // ---- mobile nav ----------------------------------------------------------
   const closeNav = () => body.classList.remove('nav-open');
   document.getElementById('menubtn')?.addEventListener('click', () => body.classList.toggle('nav-open'));
   document.getElementById('scrim')?.addEventListener('click', closeNav);
   document.getElementById('sidebar')?.addEventListener('click', (e) => {
     if ((e.target as HTMLElement).tagName === 'A') closeNav();
   });
+}
 
+function enhanceContent(): void {
   // ---- wrap code blocks: header + copy button + highlight ------------------
   document.querySelectorAll<HTMLPreElement>('pre.code').forEach((pre) => {
     const lang = pre.getAttribute('data-lang') || 'text';
@@ -140,29 +133,21 @@ function enhance(): void {
             if (s) s.textContent = 'Copy';
           }, 1600);
         })
-        .catch(() => {
-          /* clipboard blocked; code is still selectable */
-        });
+        .catch(() => {});
     });
   });
 
-  // ---- sidebar hash-item highlighting ------------------------------------
+  // ---- sidebar hash-item highlighting from URL hash -----------------------
   const sidebarLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.sidebar a[href*="#"]'));
-
-  const setSidebarFromHash = (hash: string) => {
+  const hash = location.hash.slice(1);
+  if (hash) {
     sidebarLinks.forEach((a) => {
       const linkHash = a.getAttribute('href')?.split('#')[1];
       a.classList.toggle('active', linkHash === hash);
     });
-  };
+  }
 
-  const hashFromLocation = () => location.hash.slice(1);
-  const currentHash = hashFromLocation();
-  if (currentHash) setSidebarFromHash(currentHash);
-
-  window.addEventListener('hashchange', () => setSidebarFromHash(hashFromLocation()));
-
-  // ---- scrollspy for toc --------------------------------------------------
+  // ---- scrollspy for toc & sidebar ----------------------------------------
   const tocLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc a[href^="#"]'));
   const idOf = (a: HTMLAnchorElement) => (a.getAttribute('href') || '').slice(1);
 
@@ -183,8 +168,10 @@ function enhance(): void {
     });
   };
 
+  if (scrollObserver) scrollObserver.disconnect();
+
   let current: string | null = null;
-  const obs = new IntersectionObserver(
+  scrollObserver = new IntersectionObserver(
     (entries) => {
       const visible = entries.filter((e) => e.isIntersecting);
       if (visible.length) {
@@ -198,17 +185,20 @@ function enhance(): void {
     },
     { rootMargin: '-70px 0px -70% 0px', threshold: 0 },
   );
-  els.forEach((el) => obs.observe(el));
+  els.forEach((el) => scrollObserver!.observe(el));
 }
 
 export function Enhance() {
+  const pathname = usePathname();
+  const shellDone = useRef(false);
+
   useEffect(() => {
-    // React Strict Mode runs effects twice in dev; the code-block transform is
-    // one-shot (it replaces the source nodes), so guard against a second pass.
-    const w = window as unknown as { __pulseDocsEnhanced?: boolean };
-    if (w.__pulseDocsEnhanced) return;
-    w.__pulseDocsEnhanced = true;
-    enhance();
-  }, []);
+    if (!shellDone.current) {
+      shellDone.current = true;
+      enhanceShell();
+    }
+    enhanceContent();
+  }, [pathname]);
+
   return null;
 }
