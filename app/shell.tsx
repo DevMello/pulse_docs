@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { SIDEBAR_GROUPS, PAGE_TOC, type TocLink } from './lib/nav';
 import { Search } from './search';
 
@@ -20,18 +21,18 @@ export function Shell({ currentPath, children }: ShellProps) {
         <button className="iconbtn menubtn" id="menubtn" aria-label="Toggle navigation">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <a className="brandlink" href="/">
+        <Link className="brandlink" href="/">
           <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
             <rect x="0.5" y="0.5" width="35" height="35" rx="9" fill="var(--color-brand-50)" stroke="var(--color-brand-200)"/>
             <path d="M7 21.5h5l2.5-8 4 13 3.5-13 2 8H29" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Pulse <span className="badge">SDK</span>
-        </a>
+        </Link>
         <div className="topbar-spacer"></div>
         <nav className="topnav" aria-label="Site">
-          <a className="hide-sm" href="/quick-start/">Quick start</a>
-          <a className="hide-sm" href="/npm/#api">API</a>
-          <a className="hide-sm" href="/frameworks/">Frameworks</a>
+          <Link className="hide-sm" href="/quick-start/">Quick start</Link>
+          <Link className="hide-sm" href="/npm/#api">API</Link>
+          <Link className="hide-sm" href="/frameworks/">Frameworks</Link>
           <a href="https://github.com/DevMello/pulse" rel="noopener">GitHub</a>
         </nav>
         <Search />
@@ -55,13 +56,13 @@ export function Shell({ currentPath, children }: ShellProps) {
                     ? currentPath === item.href
                     : currentPath === item.href;
                 return (
-                  <a
+                  <Link
                     key={item.label}
                     href={href}
                     className={isCurrent ? 'active' : ''}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 );
               })}
             </div>

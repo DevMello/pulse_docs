@@ -95,7 +95,7 @@ export function Search() {
               <ul className="search-results">
                 {results.map((r, i) => (
                   <li key={i}>
-                    <a href={r.href} onClick={() => setOpen(false)}>
+                    <a href={`${BASE_PATH}${r.href}`} onClick={() => setOpen(false)}>
                       <span className="search-result-title">{r.title}</span>
                       <span className="search-result-page">{r.page}</span>
                       <span className="search-result-text">{r.text.slice(0, 120)}</span>
