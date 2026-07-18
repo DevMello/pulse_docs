@@ -1,0 +1,120 @@
+<section>
+      <h2 id="script-tag">Adding the script<a class="anchor" href="#script-tag">#</a></h2>
+      <p>The tracker is a single self-hosted file — <code>px.js</code>, served from your own Pulse deployment. It sets no cookies, writes nothing to storage, and wraps its entire body in <code>try/catch</code> so a failing analytics call can never break the host page.</p>
+      <pre class="code" data-lang="html"><code>&lt;script defer data-key="YOUR_INGEST_KEY" src="https://your-pulse.vercel.app/px.js"&gt;&lt;/script&gt;</code></pre>
+      <div class="deflist">
+        <dl>
+          <dt>defer</dt>
+          <dd>Load the script without blocking rendering. Recommended, but not required.</dd>
+          <dt>data-key</dt>
+          <dd>Required. Your project's public ingest key. Without it the script does nothing and returns silently.</dd>
+          <dt>src</dt>
+          <dd>Points at <code>/px.js</code> on your deployment. The collector origin defaults to this URL's origin unless you override it with <code>data-host</code>.</dd>
+        </dl>
+      </div>
+      <p>All behaviour is configured through <code>data-*</code> attributes on that same tag — there is no separate config object for the script build.</p>
+    </section>
+
+<section>
+      <h2 id="data-attributes">Configuration: <code>data-*</code> attributes<a class="anchor" href="#data-attributes">#</a></h2>
+      <p>Attributes are read once, from the script tag itself, when the tracker loads. Boolean flags are toggled by <em>presence</em> — the attribute needs no value.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Attribute</th><th>Type</th><th>Default</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>data-key</code> <span class="req">required</span></td>
+              <td>string</td>
+              <td class="def">—</td>
+              <td>The project's public ingest key. If missing, the tracker returns immediately and sends nothing.</td>
+            </tr>
+            <tr>
+              <td><code>data-host</code></td>
+              <td>string</td>
+              <td class="def">script origin</td>
+              <td>Override the collector origin. Useful if you serve <code>px.js</code> from a different host than your Pulse app.</td>
+            </tr>
+            <tr>
+              <td><code>data-manual</code></td>
+              <td>flag</td>
+              <td class="def">off</td>
+              <td>Disable automatic pageview tracking. You drive pageviews yourself by calling <code>pulse()</code>.</td>
+            </tr>
+            <tr>
+              <td><code>data-respect-dnt</code></td>
+              <td>flag</td>
+              <td class="def">off</td>
+              <td>Drop events from browsers sending Do&nbsp;Not&nbsp;Track or Global&nbsp;Privacy&nbsp;Control signals.</td>
+            </tr>
+            <tr>
+              <td><code>data-local</code></td>
+              <td>flag</td>
+              <td class="def">off</td>
+              <td>Also track <code>localhost</code>, <code>127.*</code>, <code>::1</code>, <code>*.local</code> and <code>file://</code>. Off by default so development traffic doesn't pollute your numbers.</td>
+            </tr>
+            <tr>
+              <td><code>data-exclude</code></td>
+              <td>string</td>
+              <td class="def">—</td>
+              <td>Comma-separated paths to skip. A trailing <code>*</code> makes it a prefix match.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Example: a fully configured tag</h3>
+      <pre class="code" data-lang="html"><code>&lt;script
+  defer
+  data-key="YOUR_INGEST_KEY"
+  src="https://your-pulse.vercel.app/px.js"
+  data-respect-dnt
+  data-exclude="/admin*,/preview,/draft*"
+&gt;&lt;/script&gt;</code></pre>
+      <p>This tracks everything except your admin area and preview/draft routes, and honours Do&nbsp;Not&nbsp;Track. Pageviews are still automatic because <code>data-manual</code> is absent.</p>
+
+      <div class="callout note">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>
+        <p><strong>Excludes are also enforced server-side.</strong> Each project has its own <em>Excluded paths</em> setting in the dashboard that applies to <em>all</em> traffic regardless of the tag. Use <code>data-exclude</code> for per-page-embed control; use the dashboard setting for a project-wide rule.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="pulse-global">The <code>pulse()</code> function<a class="anchor" href="#pulse-global">#</a></h2>
+      <p>Once the script loads it exposes one global: <code>window.pulse</code>. Its signature is deliberately minimal.</p>
+      <div class="sig"><span class="fn">pulse</span>(name<span style="color:var(--color-text-subtle)">: string</span>, props<span style="color:var(--color-text-subtle)">?: object</span>)<span style="color:var(--color-text-subtle)"> =&gt; void</span></div>
+
+      <h3>Track a custom event</h3>
+      <pre class="code" data-lang="js"><code>pulse('signup', { plan: 'pro' });
+pulse('cta_click', { location: 'hero' });
+pulse('video_play');            // properties are optional</code></pre>
+
+      <h3>Track a pageview manually</h3>
+      <p>Call <code>pulse()</code> with no name, or the name <code>'pageview'</code>, to record a pageview for the current URL. This is what you use in <code>data-manual</code> mode.</p>
+      <pre class="code" data-lang="js"><code>pulse();            // pageview for the current URL
+pulse('pageview');  // identical</code></pre>
+
+      <h3>Track revenue</h3>
+      <p>Revenue rides along inside the props object under a <code>revenue</code> key. The collector lifts it out and normalizes it.</p>
+      <pre class="code" data-lang="js"><code>pulse('purchase', {
+  revenue: { amount: 29, currency: 'USD' },
+  plan: 'pro'
+});</code></pre>
+      <p>See <a class="link" href="/revenue/">Revenue tracking</a> for currency handling and how it merges with Stripe.</p>
+
+      <div class="callout note">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>
+        <p>Pageviews are automatically <strong>deduped against the last URL sent</strong>, so a router that both calls <code>pushState</code> and emits its own navigation event won't double-count a single route change.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="async-stub">Calling <code>pulse()</code> before the script loads<a class="anchor" href="#async-stub">#</a></h2>
+      <p>Because the script is <code>defer</code>red, <code>window.pulse</code> may not exist yet when your page code runs. Define a tiny stub that queues calls; the tracker drains the queue the moment it loads.</p>
+      <pre class="code" data-lang="html"><code>&lt;script&gt;
+  window.pulse = window.pulse || function () {
+    (pulse.q = pulse.q || []).push(arguments);
+  };
+&lt;/script&gt;
+&lt;script defer data-key="YOUR_INGEST_KEY" src="https://your-pulse.vercel.app/px.js"&gt;&lt;/script&gt;</code></pre>
+      <p>Now any <code>pulse('event', …)</code> call made before the tracker finishes downloading is buffered on <code>pulse.q</code> and replayed in order once it's ready. Put the stub in your document <code>&lt;head&gt;</code>, before any code that might fire an event.</p>
+    </section>

@@ -1,0 +1,89 @@
+<section>
+      <h2 id="frameworks">Overview<a class="anchor" href="#frameworks">#</a></h2>
+      <p>Each adapter wires <code>init()</code> into a framework's lifecycle and, crucially, drives pageviews from the framework's own router — which is more reliable than the core History patch for frameworks that navigate without <code>pushState</code>. The core stays framework-free; adapters are only pulled in when you import their entry point.</p>
+    </section>
+
+<section>
+      <h2 id="react">React <span class="pill react">@pulse/sdk/react</span><a class="anchor" href="#react">#</a></h2>
+      <p>Two hooks, plus re-exports of the whole core API.</p>
+
+      <h3><code>usePulse(config)</code></h3>
+      <p>Initializes Pulse for the lifetime of the component and tears it down on unmount. Keyed on the config <em>values</em>, so an inline config literal doesn't cause a rebind on every render.</p>
+      <pre class="code" data-lang="tsx"><code>import { usePulse, track } from '@pulse/sdk/react';
+
+function App() {
+  usePulse({ key: 'YOUR_KEY', host: 'https://your-pulse.vercel.app' });
+
+  return &lt;button onClick={() =&gt; track('cta_click')}&gt;Start&lt;/button&gt;;
+}</code></pre>
+      <p>Mount it once, high in your tree. For routers that use <code>pushState</code> on every navigation (React Router), the default <code>autoPageviews</code> is enough.</p>
+
+      <h3><code>usePulsePageviews(path)</code></h3>
+      <p>Fires a pageview whenever <code>path</code> changes. Use it when your router doesn't go through <code>pushState</code> — see the Next.js pattern below. Passing <code>null</code>/<code>undefined</code> is a no-op, so it's safe during the first render before a path resolves.</p>
+    </section>
+
+<section>
+      <h2 id="nextjs">Next.js App Router<a class="anchor" href="#nextjs">#</a></h2>
+      <p>App Router navigations don't always go through <code>pushState</code>, so turn off the History patch and drive pageviews from the pathname instead.</p>
+      <pre class="code" data-lang="tsx"><code>'use client';
+import { usePathname } from 'next/navigation';
+import { usePulse, usePulsePageviews } from '@pulse/sdk/react';
+
+export function Analytics() {
+  usePulse({
+    key: 'YOUR_KEY',
+    host: 'https://your-pulse.vercel.app',
+    autoPageviews: false,
+  });
+  usePulsePageviews(usePathname());
+  return null;
+}</code></pre>
+      <p>Render <code>&lt;Analytics /&gt;</code> once in your root <code>layout.tsx</code>. Because it's a client component that renders <code>null</code>, it costs nothing visually and initializes tracking on first paint.</p>
+      <div class="callout tip">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <p>Want to also capture query-string changes as distinct pageviews? Combine <code>usePathname()</code> with <code>useSearchParams()</code> and pass a joined string to <code>usePulsePageviews()</code>. Wrap that component in <code>&lt;Suspense&gt;</code>, as <code>useSearchParams()</code> requires.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="vue">Vue <span class="pill react">@pulse/sdk/vue</span><a class="anchor" href="#vue">#</a></h2>
+      <p>A plugin plus an optional router hook. It takes a router-<em>like</em> object rather than importing <code>vue-router</code>, so it works with vue-router 3 and 4 and forces no dependency.</p>
+      <pre class="code" data-lang="ts"><code>import { createApp } from 'vue';
+import { createPulse } from '@pulse/sdk/vue';
+import App from './App.vue';
+import router from './router';
+
+const app = createApp(App);
+
+app.use(createPulse(
+  { key: 'YOUR_KEY', host: 'https://your-pulse.vercel.app' },
+  router,
+));
+
+app.mount('#app');</code></pre>
+      <p>Passing the router lets its <code>afterEach</code> hook drive pageviews — more reliable than patching History, since vue-router doesn't always go through <code>pushState</code>. When you pass a router, <code>autoPageviews</code> defaults to <code>false</code> automatically so you don't double-count.</p>
+
+      <h3><code>$pulse</code> in templates</h3>
+      <p>The plugin adds a global <code>$pulse</code> property exposing <code>track</code>, <code>trackRevenue</code> and <code>pageview</code>:</p>
+      <pre class="code" data-lang="html"><code>&lt;button @click="$pulse.track('cta_click')"&gt;Start&lt;/button&gt;
+&lt;button @click="$pulse.trackRevenue('purchase', { amount: 29 })"&gt;Buy&lt;/button&gt;</code></pre>
+    </section>
+
+<section>
+      <h2 id="svelte">Svelte / SvelteKit <span class="pill react">@pulse/sdk/svelte</span><a class="anchor" href="#svelte">#</a></h2>
+      <p>SvelteKit navigates without <code>pushState</code> in some cases, so the binding takes the <code>page</code> store's URL rather than relying on the History patch. It's SSR-safe: on the server it returns a no-op, so there's nothing to guard.</p>
+      <pre class="code" data-lang="svelte"><code>&lt;!-- src/routes/+layout.svelte --&gt;
+&lt;script&gt;
+  import { onDestroy } from 'svelte';
+  import { page } from '$app/stores';
+  import { pulse } from '@pulse/sdk/svelte';
+
+  const stop = pulse(
+    { key: 'YOUR_KEY', host: 'https://your-pulse.vercel.app' },
+    page,
+  );
+  onDestroy(stop);
+&lt;/script&gt;</code></pre>
+      <p><code>pulse(config, page?)</code> returns an unsubscribe function — call it in <code>onDestroy</code> to tear tracking down. Passing the <code>page</code> store makes pageviews follow SvelteKit navigations; the store's initial synchronous emit is deduped so the first load isn't counted twice. When you pass <code>page</code>, <code>autoPageviews</code> defaults to <code>false</code>.</p>
+      <p>For plain Svelte (no SvelteKit router), call <code>pulse(config)</code> with no store to fall back to the History-based auto tracking.</p>
+    </section>

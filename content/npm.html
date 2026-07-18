@@ -1,0 +1,105 @@
+<section>
+      <h2 id="install-npm">Install <code>@pulse/sdk</code><a class="anchor" href="#install-npm">#</a></h2>
+      <pre class="code" data-lang="bash"><code>npm i @pulse/sdk
+# or: pnpm add @pulse/sdk · yarn add @pulse/sdk · bun add @pulse/sdk</code></pre>
+      <p>The package ships ESM and CJS builds with TypeScript declarations, has <strong>no runtime dependencies</strong>, and is marked side-effect-free so bundlers tree-shake anything you don't import. It reimplements the transport rather than loading <code>px.js</code>, so bundler users pay for zero extra network requests.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Entry point</th><th>Import</th><th>For</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill core">core</span></td><td><code>@pulse/sdk</code></td><td>Framework-agnostic functions</td></tr>
+            <tr><td><span class="pill react">react</span></td><td><code>@pulse/sdk/react</code></td><td>React hooks</td></tr>
+            <tr><td><span class="pill react">vue</span></td><td><code>@pulse/sdk/vue</code></td><td>Vue plugin + <code>$pulse</code></td></tr>
+            <tr><td><span class="pill react">svelte</span></td><td><code>@pulse/sdk/svelte</code></td><td>Svelte / SvelteKit binding</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+<section>
+      <h2 id="api">Core API<a class="anchor" href="#api">#</a></h2>
+      <p>Five functions, all importable from <code>@pulse/sdk</code> and re-exported from every framework entry point.</p>
+
+      <h3><code>init(config)</code></h3>
+      <div class="sig"><span class="fn">init</span>(config<span style="color:var(--color-text-subtle)">: PulseConfig</span>)<span style="color:var(--color-text-subtle)">: void</span></div>
+      <p>Configure Pulse and — unless you opt out — start automatic pageview tracking. It's <strong>safe to call more than once</strong>: React Strict Mode and hot reload both do, and a second call rebinds cleanly rather than doubling every pageview. This is the classic way an SDK silently reports 2× traffic in development, and Pulse is built not to.</p>
+      <pre class="code" data-lang="ts"><code>import { init } from '@pulse/sdk';
+
+init({
+  key: 'YOUR_INGEST_KEY',
+  host: 'https://your-pulse.vercel.app',
+  autoPageviews: true,     // default
+  respectDnt: false,       // default
+  trackLocalhost: false,   // default
+  exclude: ['/admin*'],    // default: []
+});</code></pre>
+
+      <h3><code>track(name, props?)</code></h3>
+      <div class="sig"><span class="fn">track</span>(name<span style="color:var(--color-text-subtle)">: string</span>, props<span style="color:var(--color-text-subtle)">?: EventProps</span>)<span style="color:var(--color-text-subtle)">: void</span></div>
+      <p>Record a custom event. Passing the name <code>'pageview'</code> is a shortcut that routes to <code>pageview()</code> (and gets its dedupe).</p>
+      <pre class="code" data-lang="ts"><code>import { track } from '@pulse/sdk';
+
+track('signup', { plan: 'pro', referrer: 'newsletter' });
+track('feature_used', { name: 'export', count: 3 });
+track('cta_click');   // props optional</code></pre>
+
+      <h3><code>trackRevenue(name, revenue, props?)</code></h3>
+      <div class="sig"><span class="fn">trackRevenue</span>(name<span style="color:var(--color-text-subtle)">: string</span>, revenue<span style="color:var(--color-text-subtle)">: Revenue</span>, props<span style="color:var(--color-text-subtle)">?: EventProps</span>)<span style="color:var(--color-text-subtle)">: void</span></div>
+      <p>Sugar over <code>track()</code>. These two calls produce exactly the same payload:</p>
+      <pre class="code" data-lang="ts"><code>trackRevenue('purchase', { amount: 29, currency: 'USD' });
+track('purchase', { revenue: { amount: 29, currency: 'USD' } });</code></pre>
+
+      <h3><code>pageview(url?)</code></h3>
+      <div class="sig"><span class="fn">pageview</span>(url<span style="color:var(--color-text-subtle)">?: string</span>)<span style="color:var(--color-text-subtle)">: void</span></div>
+      <p>Record a pageview. Defaults to <code>window.location.href</code>. Deduped against the last URL sent, so calling it twice for the same URL is a no-op. Pass an explicit URL when your router knows the destination before the address bar does.</p>
+      <pre class="code" data-lang="ts"><code>import { pageview } from '@pulse/sdk';
+
+pageview();                       // current URL
+pageview('https://app.dev/pricing'); // explicit</code></pre>
+
+      <h3><code>teardown()</code></h3>
+      <div class="sig"><span class="fn">teardown</span>()<span style="color:var(--color-text-subtle)">: void</span></div>
+      <p>Stop automatic tracking, unbind the route listeners, restore the original History methods, and forget the config. The framework adapters call this for you on unmount; you rarely need it directly.</p>
+    </section>
+
+<section>
+      <h2 id="config">Configuration options<a class="anchor" href="#config">#</a></h2>
+      <p>The object passed to <code>init()</code> (and to every framework helper).</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>key</code> <span class="req">required</span></td><td>string</td><td class="def">—</td><td>The project's public ingest key. Safe to ship in client code.</td></tr>
+            <tr><td><code>host</code> <span class="req">required</span></td><td>string</td><td class="def">—</td><td>Your Pulse deployment's origin, e.g. <code>https://pulse.example.com</code>. A trailing slash is trimmed for you.</td></tr>
+            <tr><td><code>autoPageviews</code></td><td>boolean</td><td class="def">true</td><td>Track pageviews automatically on History / hash route changes.</td></tr>
+            <tr><td><code>respectDnt</code></td><td>boolean</td><td class="def">false</td><td>Drop events from browsers sending DNT / GPC.</td></tr>
+            <tr><td><code>trackLocalhost</code></td><td>boolean</td><td class="def">false</td><td>Track <code>localhost</code> and <code>file://</code>. Off keeps dev traffic out of your data.</td></tr>
+            <tr><td><code>exclude</code></td><td>string[]</td><td class="def">[]</td><td>Paths to skip. A trailing <code>*</code> is a prefix match, e.g. <code>'/admin*'</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+<section>
+      <h2 id="types">TypeScript types<a class="anchor" href="#types">#</a></h2>
+      <p>All exported from every entry point.</p>
+      <pre class="code" data-lang="ts"><code>interface PulseConfig {
+  key: string;
+  host: string;
+  autoPageviews?: boolean;   // default true
+  respectDnt?: boolean;      // default false
+  trackLocalhost?: boolean;  // default false
+  exclude?: string[];        // default []
+}
+
+interface Revenue {
+  amount: number;            // major units — 29 means $29.00
+  currency?: string;         // ISO 4217, default 'USD'
+}
+
+type EventProps = Record&lt;string, string | number | boolean | Revenue | undefined&gt;;</code></pre>
+      <div class="callout note">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>
+        <p>Event properties must be <strong>scalars</strong> — string, number, or boolean — plus the special <code>revenue</code> object. Nested objects and arrays are dropped server-side to keep the events table lean.</p>
+      </div>
+    </section>

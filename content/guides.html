@@ -1,0 +1,73 @@
+<section>
+      <h2 id="recipes">Recipes<a class="anchor" href="#recipes">#</a></h2>
+
+      <h3>Track outbound link clicks</h3>
+      <pre class="code" data-lang="js"><code>document.addEventListener('click', (e) =&gt; {
+  const a = e.target.closest('a');
+  if (a &amp;&amp; a.host !== location.host) {
+    pulse('outbound', { href: a.href });
+  }
+});</code></pre>
+
+      <h3>Track a form submission</h3>
+      <pre class="code" data-lang="ts"><code>import { track } from '@pulse/sdk';
+
+form.addEventListener('submit', () =&gt; {
+  track('contact_submit', { form: 'homepage' });
+});</code></pre>
+
+      <h3>Track a file download</h3>
+      <pre class="code" data-lang="js"><code>pulse('download', { file: 'pricing.pdf' });</code></pre>
+
+      <h3>Report revenue from a webhook you already have</h3>
+      <p>No client needed — POST the wire format from your server when your payment provider notifies you of a sale.</p>
+      <pre class="code" data-lang="ts"><code>await fetch('https://your-pulse.vercel.app/api/event', {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain' },
+  body: JSON.stringify({
+    k: process.env.PULSE_KEY,
+    n: 'purchase',
+    u: 'https://acme.dev/checkout',
+    p: { revenue: { amount: 49, currency: 'USD' }, source: 'gumroad' },
+  }),
+});</code></pre>
+
+      <h3>Manual pageviews only</h3>
+      <p>Turn off auto-tracking and fire pageviews on your own terms — handy for wizards or modals you want to count as steps.</p>
+      <pre class="code" data-lang="html"><code>&lt;script defer data-key="YOUR_KEY" src="…/px.js" data-manual&gt;&lt;/script&gt;
+&lt;script&gt;
+  // later, when a step opens:
+  pulse('pageview');
+&lt;/script&gt;</code></pre>
+    </section>
+
+<section>
+      <h2 id="faq">Troubleshooting &amp; FAQ<a class="anchor" href="#faq">#</a></h2>
+
+      <h3>My events aren't showing up</h3>
+      <ul>
+        <li>You're on <code>localhost</code> — dev traffic is skipped unless you set <code>trackLocalhost</code> / <code>data-local</code>.</li>
+        <li><code>localStorage.pulse_ignore</code> is set in this browser — clear it with <code>delete localStorage.pulse_ignore</code>.</li>
+        <li>Your domain isn't on the project's <a class="link" href="/privacy/#domains">allow-list</a>, so events are rejected server-side.</li>
+        <li>The <code>data-key</code> / <code>key</code> is wrong, or the <code>host</code> points at the wrong deployment.</li>
+        <li>Check the Network tab for the <code>/api/event</code> request. A <code>400</code> means a broken payload; <code>202</code> means accepted (even quiet rejections return <code>202</code>).</li>
+      </ul>
+
+      <h3>My SPA only records the first page</h3>
+      <p>Your framework navigates without <code>pushState</code>. Use the matching <a class="link" href="/frameworks/">framework adapter</a>, or call <code>pageview()</code> on each route change.</p>
+
+      <h3>I'm getting double pageviews</h3>
+      <p>Usually two initializations, or auto-tracking left on <em>and</em> a manual driver. Pick one: either <code>autoPageviews: true</code> and nothing else, or <code>autoPageviews: false</code> plus the router hook. <code>init()</code> is safe to call repeatedly, but two <em>different</em> drivers both firing will double-count.</p>
+
+      <h3>Do I need a cookie banner?</h3>
+      <p>No. Consent requirements are triggered by storing or accessing information on a device, and by processing personal data. Pulse does neither — no cookies, no storage identifiers, no personal data retained. (This isn't legal advice, but it's the same basis Plausible and Umami operate on.)</p>
+
+      <h3>Is the ingest key a secret?</h3>
+      <p>No. It's public by necessity — it ships in your HTML. The domain allow-list is what protects you, not the key's secrecy.</p>
+
+      <h3>Does the SDK slow down my site?</h3>
+      <p>The script is 928&nbsp;B gzipped (measured and enforced in CI), loads <code>defer</code>red, and sends fire-and-forget beacons. The npm package adds no network request and tree-shakes to the functions you use.</p>
+
+      <h3>Can I self-check the payload before shipping?</h3>
+      <p>Yes — open your browser's Network tab, filter to <code>event</code>, and inspect the request body. It's the <a class="link" href="/reference/#wire-format">wire format</a> above, in plain text.</p>
+    </section>

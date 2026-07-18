@@ -1,0 +1,36 @@
+<section>
+      <h2 id="revenue">Revenue tracking<a class="anchor" href="#revenue">#</a></h2>
+      <p>Revenue is a first-class citizen in Pulse. Anything you can't wire to Stripe — Gumroad, Lemon Squeezy, Paddle, a manual invoice, an ad payout — you can report through the SDK, and it lands in the <em>same</em> pipeline as your Stripe webhooks. Every money query then reads one table.</p>
+
+      <h3>Two equivalent forms</h3>
+      <pre class="code" data-lang="ts"><code>import { track, trackRevenue } from '@pulse/sdk';
+
+// Dedicated helper (clearest)
+trackRevenue('purchase', { amount: 29, currency: 'USD' }, { plan: 'pro' });
+
+// Or inline on any event
+track('purchase', { revenue: { amount: 29, currency: 'USD' }, plan: 'pro' });</code></pre>
+      <pre class="code" data-lang="js"><code>// Script tag — revenue rides inside props
+pulse('purchase', { revenue: { amount: 29, currency: 'USD' } });</code></pre>
+
+      <h3>Amounts are in major units</h3>
+      <p>Pass <code>29</code> for $29.00 — not <code>2900</code>. The collector converts to integer minor units in the currency you charged, so nothing is ever stored as a float. Zero-decimal currencies like <code>JPY</code> and <code>KRW</code>, and three-decimal ones like <code>KWD</code>, are handled correctly server-side.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>amount</code></td><td>number</td><td>Major units. Must be finite and <strong>≥ 0</strong> — a NaN or negative amount is rejected outright rather than coerced to zero, because a corrupted public revenue figure is the one number people actually check.</td></tr>
+            <tr><td><code>currency</code></td><td>string</td><td>ISO 4217, case-insensitive. Defaults to <code>USD</code> if omitted or malformed.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Where it shows up</h3>
+      <p>SDK revenue is stored as a normalized record with <code>source: 'sdk'</code> and <code>kind: 'one_time'</code>, alongside Stripe rows. It appears on the dashboard's revenue view and — if you've enabled revenue on the public page — in the public totals. If you've set <code>PULSE_FX_RATES</code> on your deployment, mixed currencies are normalized into one display total; anything unconverted is flagged in the UI rather than silently misreported.</p>
+
+      <div class="callout note">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>
+        <p>A revenue event is <strong>also</strong> a regular event — the purchase is recorded even if the money side fails. If the revenue row can't be written, the pageview/event is still durable and the failure is logged server-side, never surfaced to the fire-and-forget client.</p>
+      </div>
+    </section>

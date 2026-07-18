@@ -1,0 +1,57 @@
+<section>
+      <h2 id="pageviews">Pageviews &amp; SPA routing<a class="anchor" href="#pageviews">#</a></h2>
+      <p>By default Pulse tracks a pageview on first load and on every client-side navigation. It does this by wrapping the History API and listening for the browser's own navigation events.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Signal</th><th>Fires a pageview?</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td><code>history.pushState</code></td><td>Yes</td><td>The normal SPA navigation. Patched so the original still runs, then a pageview fires.</td></tr>
+            <tr><td><code>popstate</code></td><td>Yes</td><td>Back / forward navigation.</td></tr>
+            <tr><td><code>hashchange</code></td><td>Yes</td><td>Hash routers change the URL without touching History.</td></tr>
+            <tr><td><code>history.replaceState</code></td><td>No</td><td>Routers use it for query-param updates and scroll restoration — not real navigations.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Dedupe</h3>
+      <p>Every pageview is checked against the last URL sent. If a router both calls <code>pushState</code> <em>and</em> fires its own event for one route change, only one pageview is recorded.</p>
+
+      <h3>Prerender awareness</h3>
+      <p>Chrome prerenders pages a user may never actually look at. The script defers the initial pageview until the page becomes <em>visible</em>, so a prerendered-but-unseen page isn't counted — exactly the vanity inflation the public stats page is designed to avoid.</p>
+
+      <h3>Hash routes become distinct pages</h3>
+      <p>The History API never sees the URL fragment, so the collector treats a leading <code>#/</code> as part of the path. <code>example.com/#/settings</code> is recorded as <code>/#/settings</code>, meaning hash-router views show up as separate pages instead of everything collapsing onto <code>/</code>.</p>
+
+      <div class="callout warn">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <p><strong>Some frameworks don't route through <code>pushState</code>.</strong> Next.js App Router, vue-router and SvelteKit can navigate without it, so the History patch may miss pages. For those, use the framework adapter (which drives pageviews from the router) or call <code>pageview()</code> yourself. See <a class="link" href="/frameworks/">Frameworks</a>.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="events">Custom events<a class="anchor" href="#events">#</a></h2>
+      <p>A custom event is any named signal that isn't a pageview — a signup, a click, a feature toggle, a funnel step. Give it a name and, optionally, a flat bag of scalar properties.</p>
+      <pre class="code" data-lang="ts"><code>import { track } from '@pulse/sdk';
+
+// Simple named event
+track('newsletter_subscribe');
+
+// With properties — strings, numbers, booleans
+track('plan_selected', { plan: 'pro', annual: true, seats: 5 });
+
+// The script-tag equivalent
+// pulse('plan_selected', { plan: 'pro', annual: true, seats: 5 });</code></pre>
+      <h3>Naming</h3>
+      <ul>
+        <li>Names are trimmed and truncated to <strong>64 characters</strong> server-side.</li>
+        <li>An empty name is rejected (<code>400</code>).</li>
+        <li>The name <code>'pageview'</code> is reserved — it routes to pageview tracking.</li>
+        <li>Prefer stable, lowercase, snake_case names (<code>cta_click</code>) so they group cleanly in the dashboard's funnels and event breakdowns.</li>
+      </ul>
+      <h3>Properties</h3>
+      <ul>
+        <li>Up to <strong>24 keys</strong>; extra keys are dropped.</li>
+        <li>String values are truncated to <strong>500 characters</strong>.</li>
+        <li>Only <code>string</code>, <code>number</code> (finite), and <code>boolean</code> are kept. Nested objects/arrays are ignored — except the reserved <code>revenue</code> object.</li>
+      </ul>
+    </section>

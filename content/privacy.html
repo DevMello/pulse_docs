@@ -1,0 +1,52 @@
+<section>
+      <h2 id="optout">Opt-out &amp; Do Not Track<a class="anchor" href="#optout">#</a></h2>
+      <p>Pulse sets no cookies, writes nothing to <code>localStorage</code>, uses no fingerprinting, and does no cross-site tracking. There are three ways an individual visit can be excluded.</p>
+
+      <h3>The <code>pulse_ignore</code> flag</h3>
+      <p>Set a single <code>localStorage</code> key in any browser you don't want counted — your own, mainly, or a staging environment. The SDK <strong>reads</strong> this flag on every send and never writes it.</p>
+      <pre class="code" data-lang="js"><code>// Run once in the browser's console, or from your own admin UI
+localStorage.pulse_ignore = '1';
+
+// To start counting yourself again
+delete localStorage.pulse_ignore;</code></pre>
+
+      <h3>Do Not Track &amp; Global Privacy Control</h3>
+      <p>Opt in to honouring DNT / GPC with <code>respectDnt: true</code> (or the <code>data-respect-dnt</code> attribute). When on, events from browsers signalling either preference are dropped. The collector <em>also</em> checks the <code>DNT</code> and <code>Sec-GPC</code> request headers, so the preference is respected even if someone posts to the endpoint directly rather than through the tracker.</p>
+
+      <h3>How unique visitors are counted</h3>
+      <p>No identifier is stored. A visitor is a <strong>salted daily-rotating hash</strong> computed on the server:</p>
+      <pre class="code" data-lang="text"><code>sha256( daily_salt + project_id + ip + user_agent )</code></pre>
+      <p>Every input except the salt is already in an ordinary HTTP request, and none of them is stored — the IP is used to compute this and look up a country, then discarded. The salt is random per UTC day and <strong>destroyed after 48 hours</strong>, after which that day's hashes can't be recomputed or reversed by anyone, including the site owner. That's what makes "we can't track you across days" a property of the system rather than a promise.</p>
+    </section>
+
+<section>
+      <h2 id="filtering">Excludes, localhost &amp; bots<a class="anchor" href="#filtering">#</a></h2>
+
+      <h3>Excluding paths</h3>
+      <p>Skip routes with <code>exclude</code> (SDK) or <code>data-exclude</code> (script). Exact match, or prefix match with a trailing <code>*</code>.</p>
+      <pre class="code" data-lang="ts"><code>init({
+  key: 'YOUR_KEY',
+  host: 'https://your-pulse.vercel.app',
+  exclude: ['/admin*', '/preview', '/checkout/success'],
+});</code></pre>
+
+      <h3>Localhost &amp; development</h3>
+      <p>By default Pulse does <strong>not</strong> track <code>localhost</code>, <code>127.*</code>, <code>::1</code>, <code>*.local</code>, or <code>file://</code> pages, so your dev server never pollutes real numbers. Opt in with <code>trackLocalhost: true</code> or <code>data-local</code> when you specifically want to test the pipeline end to end.</p>
+
+      <h3>Bot filtering</h3>
+      <p>The tracker skips obvious automation client-side as a cheap optimization — it checks <code>navigator.webdriver</code> and known headless globals (<code>_phantom</code>, <code>__nightmare</code>, <code>callPhantom</code>) and simply doesn't send the request. The <em>real</em> filtering happens on the server against a maintained bot list, at a per-project sensitivity level. Bot events are dropped quietly (<code>202</code>) rather than stored.</p>
+    </section>
+
+<section>
+      <h2 id="domains">Domain allow-list<a class="anchor" href="#domains">#</a></h2>
+      <p>Because the ingest key is public, it can't be what authorizes a write. The real defense against forged events is your project's <strong>domain allow-list</strong>, configured in the dashboard. If set, the collector only accepts events whose URL hostname matches.</p>
+      <ul>
+        <li>An entry also covers its <strong>subdomains</strong> — adding <code>example.com</code> accepts <code>www.example.com</code> and <code>blog.example.com</code> too.</li>
+        <li>A leading <code>www.</code> is normalized away on both sides.</li>
+        <li>If the list is empty, all domains are accepted (convenient for getting started; tighten it before you publish a stats page).</li>
+      </ul>
+      <div class="callout tip">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <p>The allow-list is why it's safe to expose <code>data-key</code> in your HTML: an event forged from another domain is rejected before it's ever stored.</p>
+      </div>
+    </section>

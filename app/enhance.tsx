@@ -146,13 +146,12 @@ function enhance(): void {
     });
   });
 
-  // ---- scrollspy for sidebar + toc ----------------------------------------
-  const sideLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.sidebar a[href^="#"]'));
+  // ---- scrollspy for toc --------------------------------------------------
   const tocLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc a[href^="#"]'));
   const idOf = (a: HTMLAnchorElement) => (a.getAttribute('href') || '').slice(1);
 
   const seen = new Set<string>();
-  [...sideLinks, ...tocLinks].forEach((a) => {
+  tocLinks.forEach((a) => {
     const id = idOf(a);
     if (id && document.getElementById(id)) seen.add(id);
   });
@@ -161,7 +160,6 @@ function enhance(): void {
     .filter((x): x is HTMLElement => x !== null);
 
   const setActive = (id: string) => {
-    sideLinks.forEach((a) => a.classList.toggle('active', idOf(a) === id));
     tocLinks.forEach((a) => a.classList.toggle('active', idOf(a) === id));
   };
 

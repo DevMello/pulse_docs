@@ -1,0 +1,25 @@
+<section>
+      <h2 id="quickstart">Quick start<a class="anchor" href="#quickstart">#</a></h2>
+      <p>Grab your project's <strong>public ingest key</strong> from the Pulse dashboard (Project → Settings), then pick a path below. Your first pageview should land within seconds.</p>
+
+      <h3>Option A — the script tag</h3>
+      <p>Paste this before <code>&lt;/body&gt;</code>. That is the entire integration.</p>
+      <pre class="code" data-lang="html"><code>&lt;script defer data-key="YOUR_INGEST_KEY" src="https://your-pulse.vercel.app/px.js"&gt;&lt;/script&gt;</code></pre>
+      <p>Swap <code>your-pulse.vercel.app</code> for your own deployment's origin, and <code>YOUR_INGEST_KEY</code> for the key shown in the dashboard. The key is <strong>public by design</strong> — it ships in client code, and the domain allow-list (not the key) is what stops forged events.</p>
+
+      <h3>Option B — the npm package</h3>
+      <pre class="code" data-lang="bash"><code>npm i @pulse/sdk</code></pre>
+      <pre class="code" data-lang="ts"><code>import { init, track, trackRevenue } from '@pulse/sdk';
+
+init({
+  key: 'YOUR_INGEST_KEY',
+  host: 'https://your-pulse.vercel.app',
+});
+
+// Custom event
+track('signup', { plan: 'pro' });
+
+// Revenue
+trackRevenue('purchase', { amount: 29, currency: 'USD' }, { plan: 'pro' });</code></pre>
+      <p>Calling <code>init()</code> starts automatic pageview tracking immediately. Everything else — events, revenue, framework helpers — builds on top of that.</p>
+    </section>

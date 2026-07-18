@@ -1,0 +1,98 @@
+<section>
+      <h2 id="wire-format">Wire format<a class="anchor" href="#wire-format">#</a></h2>
+      <p>Both the script and the npm package <code>POST</code> a small JSON body to <code>/api/event</code> as <code>text/plain</code> — which keeps it a CORS "simple request" with no preflight, so a pageview costs exactly one round trip. Keys are single letters because this is the hot path.</p>
+      <pre class="code" data-lang="js"><code>POST https://your-pulse.vercel.app/api/event
+Content-Type: text/plain
+
+{
+  "k": "YOUR_INGEST_KEY",          // project ingest key
+  "n": "pageview",                  // event name
+  "u": "https://acme.dev/pricing?utm_source=hn",  // full href
+  "r": "https://news.ycombinator.com/",           // referrer, or null
+  "w": 1440,                        // viewport width (server buckets it)
+  "p": { "plan": "pro",             // custom props (optional)
+         "revenue": { "amount": 29, "currency": "USD" } }
+}</code></pre>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Key</th><th>Meaning</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>k</code></td><td>Ingest key</td><td>Required. Identifies the project.</td></tr>
+            <tr><td><code>n</code></td><td>Event name</td><td>Required. <code>pageview</code> or a custom name.</td></tr>
+            <tr><td><code>u</code></td><td>Page href</td><td>Full URL. Only the pathname and UTM keys are kept — the rest of the query string is dropped before the row is written and never stored.</td></tr>
+            <tr><td><code>r</code></td><td>Referrer</td><td><code>document.referrer</code> or <code>null</code>. Normalized and grouped server-side.</td></tr>
+            <tr><td><code>w</code></td><td>Viewport width</td><td>Raw pixels; bucketed server-side. Not identifying on its own.</td></tr>
+            <tr><td><code>p</code></td><td>Properties</td><td>Optional. Scalar props plus an optional <code>revenue</code> object.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Transport uses <code>navigator.sendBeacon</code> when available — it survives the page being unloaded — and falls back to <code>fetch</code> with <code>keepalive: true</code>. Either way, the client never reads the response.</p>
+
+      <div class="callout tip">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 2 8 6M12 2l4 4"/><path d="M4 12v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/></svg></span>
+        <p>You can integrate <strong>without any Pulse client at all</strong> — from a backend, a webhook, or curl — by posting this exact body to <code>/api/event</code>. A <code>CORS</code> preflight (<code>OPTIONS</code>) is answered for JSON <code>Content-Type</code> if you post from a browser.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="enrichment">What the server does with your event<a class="anchor" href="#enrichment">#</a></h2>
+      <p>The client stays dumb on purpose. Everything below is derived on the edge from data the request already carries, then the raw inputs are discarded.</p>
+      <div class="grid cols-2">
+        <div class="card">
+          <h4 style="margin-top:0">Derived &amp; stored</h4>
+          <ul style="margin-bottom:0">
+            <li>Device, browser, OS — from the User-Agent</li>
+            <li>Country &amp; region — from edge geo headers</li>
+            <li>Referrer host + channel group</li>
+            <li>UTM source / medium / campaign / term / content</li>
+            <li>Screen-size bucket — from viewport width</li>
+            <li>A salted daily visitor hash</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0">Discarded, never stored</h4>
+          <ul style="margin-bottom:0">
+            <li>The raw IP address (used, then dropped)</li>
+            <li>The full User-Agent string</li>
+            <li>Everything in the query string except UTM keys</li>
+            <li>The URL fragment (except a leading <code>#/</code> route)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+<section>
+      <h2 id="responses">HTTP responses<a class="anchor" href="#responses">#</a></h2>
+      <p>The client is fire-and-forget and ignores the response, so the collector stays deliberately quiet: it only distinguishes cases the <em>site owner</em> can act on. A status code never reveals whether a key exists, a domain is allow-listed, or a bot evaded the filter.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Status</th><th>Meaning</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><code>202</code></td><td>Accepted</td><td>The normal success — <em>and</em> most quiet rejections (unknown key, archived project, bot, excluded path, DNT). Indistinguishable from outside on purpose.</td></tr>
+            <tr><td><code>400</code></td><td>Bad payload</td><td>The one rejection worth surfacing: malformed JSON, missing key, missing/empty name, or an unparseable URL. It means the integration is broken.</td></tr>
+            <tr><td><code>429</code></td><td>Rate limited</td><td>Too many events from one IP. Includes a <code>Retry-After</code> header. The limiter is a spike damper, not a hard quota.</td></tr>
+            <tr><td><code>503</code></td><td>Not configured</td><td>The deployment is missing its service-role key, or a lookup failed. A server-side misconfiguration to fix.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+<section>
+      <h2 id="limits">Limits &amp; validation<a class="anchor" href="#limits">#</a></h2>
+      <p>Guardrails applied server-side so one caller can't bloat the busiest table in the database.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Limit</th><th>Value</th><th>Behaviour when exceeded</th></tr></thead>
+          <tbody>
+            <tr><td>Request body</td><td>16&nbsp;KB</td><td>Rejected <code>400</code></td></tr>
+            <tr><td>Event name length</td><td>64 chars</td><td>Truncated</td></tr>
+            <tr><td>Path length</td><td>1024 chars</td><td>Truncated</td></tr>
+            <tr><td>Property keys</td><td>24</td><td>Extra keys dropped</td></tr>
+            <tr><td>Property value length</td><td>500 chars</td><td>Truncated (strings)</td></tr>
+            <tr><td>Property value types</td><td>string · number · boolean</td><td>Other types dropped</td></tr>
+            <tr><td>Revenue amount</td><td>finite, ≥ 0</td><td>Whole revenue claim rejected</td></tr>
+            <tr><td>Ingest rate</td><td>10/s per IP, burst 40</td><td>Rejected <code>429</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
