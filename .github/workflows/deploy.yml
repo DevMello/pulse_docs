@@ -45,8 +45,9 @@ jobs:
       - name: Build static export
         run: npm run build
         env:
-          # Feed the computed base path into next.config.ts.
+          # Feed the computed base path into next.config.ts and client-side code.
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
