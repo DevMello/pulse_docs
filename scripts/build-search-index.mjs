@@ -8,6 +8,7 @@ const OUT_FILE = path.join(process.cwd(), 'public', 'search-index.json');
 const PAGE_META = {
   'introduction': { href: '/', page: 'Introduction', group: 'Getting started' },
   'quick-start': { href: '/quick-start/', page: 'Quick start', group: 'Getting started' },
+  'mcp': { href: '/mcp/', page: 'AI assistants', group: 'AI assistants' },
   'script-tag': { href: '/script-tag/', page: 'The script tag', group: 'The script tag' },
   'npm': { href: '/npm/', page: 'The npm package', group: 'The npm package' },
   'concepts': { href: '/concepts/', page: 'Concepts', group: 'Concepts' },

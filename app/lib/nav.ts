@@ -23,6 +23,15 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     ],
   },
   {
+    title: 'AI assistants',
+    items: [
+      { label: 'Connect the MCP server', href: '/mcp/', hash: 'mcp' },
+      { label: 'What it can do', href: '/mcp/', hash: 'mcp-tools' },
+      { label: 'Pairing with the skill', href: '/mcp/', hash: 'mcp-skill' },
+      { label: 'Managing access', href: '/mcp/', hash: 'mcp-access' },
+    ],
+  },
+  {
     title: 'The script tag',
     items: [
       { label: 'Adding the script', href: '/script-tag/', hash: 'script-tag' },
@@ -91,6 +100,12 @@ export const PAGE_TOC: Record<string, TocLink[]> = {
   ],
   '/quick-start/': [
     { hash: 'quickstart', label: 'Quick start' },
+  ],
+  '/mcp/': [
+    { hash: 'mcp', label: 'Connect the MCP server' },
+    { hash: 'mcp-tools', label: 'What it can do' },
+    { hash: 'mcp-skill', label: 'Pairing with the skill' },
+    { hash: 'mcp-access', label: 'Managing access' },
   ],
   '/script-tag/': [
     { hash: 'script-tag', label: 'Adding the script' },

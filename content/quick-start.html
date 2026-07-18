@@ -32,4 +32,5 @@ trackRevenue('purchase', { amount: 29, currency: 'USD' }, { plan: 'pro' });</cod
       <pre class="code" data-lang="text"><code>Add Pulse analytics to this app. My instance is at
 https://your-pulse.vercel.app and the ingest key is YOUR_INGEST_KEY.</code></pre>
       <p>The skill walks the agent through the whole job: detect your framework, pick the script tag or <code>@pulse/sdk</code>, wire the right adapter (React, Next.js App Router, Vue, Svelte/SvelteKit), avoid the classic double-pageview mistakes, and verify events actually reach your collector before calling it done.</p>
+      <p>Note that this still assumes you made the project and copied the key yourself. Add the <a class="link" href="/mcp/">MCP server</a> as well and your assistant can do that part too — then the whole setup is one sentence, with no dashboard visit at all.</p>
     </section>

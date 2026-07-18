@@ -1,0 +1,97 @@
+<section>
+      <h2 id="mcp">Connect the MCP server<a class="anchor" href="#mcp">#</a></h2>
+      <p>The <a class="link" href="/quick-start/#quickstart">agent skill</a> teaches your assistant to write the integration — but it still needs a project and an ingest key to write <em>in</em>, and those only exist once someone opens the dashboard and makes them. The MCP server closes that gap. Connect it once and your assistant can create the project, read back the key, and hand it straight to the skill.</p>
+      <p>The result is that <em>"set up Pulse for acme.com"</em> works start to finish, without you leaving the conversation.</p>
+      <p>It is <strong>on by default</strong> and needs no configuration beyond the <code>SUPABASE_SERVICE_ROLE_KEY</code> you already set for ingestion. Your instance serves it at:</p>
+      <pre class="code" data-lang="text"><code>https://your-pulse.vercel.app/api/mcp</code></pre>
+      <p>Add that as a custom connector and you're done. There is no API key to generate or paste — the server speaks OAuth 2.1 with PKCE and dynamic client registration, so your assistant discovers the endpoints itself, sends you to a consent screen, and you approve it by name.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Client</th><th>How to add it</th></tr></thead>
+          <tbody>
+            <tr><td>Claude (web, desktop)</td><td>Settings → Connectors → <strong>Add custom connector</strong> → paste the URL</td></tr>
+            <tr><td>ChatGPT</td><td>Settings → Connectors → <strong>Create</strong> → paste the URL</td></tr>
+            <tr><td>Claude Code</td><td><code>claude mcp add --transport http pulse https://your-pulse.vercel.app/api/mcp</code></td></tr>
+            <tr><td>Cursor, Zed, others</td><td>Any MCP client with remote HTTP + OAuth support</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout note">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>
+        <p>The transport is <strong>Streamable HTTP</strong>, not SSE. SSE was removed from the MCP spec in 2025 and supporting it would mean running Redis — which would break Pulse's promise that a deployment needs nothing but Vercel and Supabase.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="mcp-tools">What it can do<a class="anchor" href="#mcp-tools">#</a></h2>
+      <p>Four tools, scoped to setup and nothing else.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Tool</th><th>Does</th></tr></thead>
+          <tbody>
+            <tr><td><code>list_projects</code></td><td>Names, slugs, domains and timezones for everything on the instance.</td></tr>
+            <tr><td><code>create_project</code></td><td>Creates a project and returns its ingest key plus a paste-ready snippet.</td></tr>
+            <tr><td><code>get_project_key</code></td><td>Ingest key and install snippets for one existing project.</td></tr>
+            <tr><td><code>update_project_domains</code></td><td>Replaces a project's domain allow-list. Replaces, not merges — send the full list.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Domains are normalized on the way in, so an assistant that passes whatever the user typed still gets it right: <code>https://www.Acme.com/pricing</code> is stored as <code>acme.com</code>.</p>
+
+      <h3>What it deliberately can't do</h3>
+      <p>There is no tool to delete or archive a project, rotate an ingest key, read visitor or revenue data, or change public-page visibility. Two reasons, and they're worth stating plainly:</p>
+      <ul>
+        <li>An assistant acting on a misread instruction should not be able to cause a loss you can't undo.</li>
+        <li>Your analytics are not something a connected app needs to see in order to set up tracking.</li>
+      </ul>
+      <p>Those operations stay in the dashboard, where a human is doing them on purpose.</p>
+
+      <div class="callout tip">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <p>The ingest key these tools return is <strong>public by design</strong> — it ships in your page source either way, and the <a class="link" href="/privacy/#domains">domain allow-list</a> is what actually stops spoofed data. It is safe for an agent to write into a repo or commit.</p>
+      </div>
+    </section>
+
+<section>
+      <h2 id="mcp-skill">Pairing it with the agent skill<a class="anchor" href="#mcp-skill">#</a></h2>
+      <p>The MCP server and the <a class="link" href="https://github.com/DevMello/pulse/tree/main/skills/add-pulse-analytics">agent skill</a> solve opposite halves of the same job, and they're designed to be used together:</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th></th><th>MCP server</th><th>Agent skill</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Answers</strong></td><td>"What project and key do I use?"</td><td>"What code do I write, and where?"</td></tr>
+            <tr><td><strong>Runs against</strong></td><td>Your Pulse instance</td><td>The repo you're editing</td></tr>
+            <tr><td><strong>Install</strong></td><td>Once, per assistant</td><td>Once, per project you track</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Install the skill in the project you want to track:</p>
+      <pre class="code" data-lang="bash"><code>npx skills add DevMello/pulse --skill add-pulse-analytics</code></pre>
+      <p>With the connector added and the skill installed, the whole setup collapses into one sentence:</p>
+      <pre class="code" data-lang="text"><code>Set up Pulse analytics for this app. It's deployed at acme.com.</code></pre>
+      <p>Your assistant creates the project through MCP, gets the key back, then follows the skill to detect your framework, choose the script tag or <code>@pulse/sdk</code>, wire the right adapter, avoid the classic double-pageview mistakes, and verify events actually reach the collector before calling it done.</p>
+      <p>They work fine apart, too. Without the skill, MCP still gets you a project and a snippet to paste. Without MCP, the skill still does the integration — you just paste the key in yourself, as in <a class="link" href="/quick-start/#quickstart">Option C</a> of the quick start.</p>
+    </section>
+
+<section>
+      <h2 id="mcp-access">Managing access<a class="anchor" href="#mcp-access">#</a></h2>
+      <p>Everything lives under <strong>Connected apps</strong> at <code>/app/settings</code>.</p>
+
+      <h3>The master switch</h3>
+      <p>Turning MCP off takes effect immediately — discovery starts returning <code>404</code> and every live token stops working on its next request. It's a pause, not a purge: approved apps are kept, so turning it back on restores them without re-authorizing each one.</p>
+
+      <h3>Per-app disconnect</h3>
+      <p>One click revokes that grant and every token issued under it. The app has to ask again, and you have to approve it again.</p>
+      <p>Access tokens last an hour. Refresh tokens rotate on every use, and presenting an already-used one is treated as theft rather than a mistake — the entire grant is revoked on the spot.</p>
+
+      <div class="callout warn">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <p><strong>Leaving this on exposes an open registration endpoint.</strong> That's what the MCP spec requires, and it is safe on its own — a registered client holds no access at all until you approve it by name on the consent screen, and unapproved registrations are swept away daily. But it is a real thing to know about your deployment, and if you'd rather not run one, the switch is right there.</p>
+      </div>
+    </section>
