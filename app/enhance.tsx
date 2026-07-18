@@ -29,8 +29,11 @@ function esc(s: string): string {
 function segment(text: string, lang: string): string {
   let e = esc(text);
   if (lang === 'html' || lang === 'svelte') {
-    e = e.replace(/(&lt;\/?)([a-zA-Z][\w-]*)/g, '$1<span class="t-tag">$2</span>');
+    // Attributes before tags: a later replace() rescans the earlier one's
+    // injected <span class="…"> markup, and the attr pattern would mangle its
+    // class= — the tag pattern only matches the escaped &lt; form, so it can't.
     e = e.replace(/([a-zA-Z-]+)(=)/g, '<span class="t-attr">$1</span>$2');
+    e = e.replace(/(&lt;\/?)([a-zA-Z][\w-]*)/g, '$1<span class="t-tag">$2</span>');
     return e;
   }
   e = e.replace(/\b(0x[0-9a-fA-F]+|\d[\d_]*(?:\.\d+)?)\b/g, '<span class="t-num">$1</span>');
@@ -41,7 +44,7 @@ function segment(text: string, lang: string): string {
 function commentRe(lang: string): string {
   if (lang === 'bash' || lang === 'sh') return '#[^\\n]*';
   if (lang === 'sql') return '--[^\\n]*';
-  if (lang === 'html') return '&lt;!--[\\s\\S]*?--&gt;';
+  if (lang === 'html') return '<!--[\\s\\S]*?-->';
   if (lang === 'text') return '';
   return '\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/';
 }
