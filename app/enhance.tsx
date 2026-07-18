@@ -186,6 +186,12 @@ function enhanceContent(): void {
     { rootMargin: '-70px 0px -70% 0px', threshold: 0 },
   );
   els.forEach((el) => scrollObserver!.observe(el));
+
+  // ---- scroll sidebar to keep the active item in view ---------------------
+  const activeLink = document.querySelector<HTMLAnchorElement>('.sidebar a.active');
+  if (activeLink) {
+    activeLink.scrollIntoView({ block: 'center' });
+  }
 }
 
 export function Enhance() {
