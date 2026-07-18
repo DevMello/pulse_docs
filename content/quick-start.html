@@ -8,7 +8,9 @@
       <p>Swap <code>your-pulse.vercel.app</code> for your own deployment's origin, and <code>YOUR_INGEST_KEY</code> for the key shown in the dashboard. The key is <strong>public by design</strong> — it ships in client code, and the domain allow-list (not the key) is what stops forged events.</p>
 
       <h3>Option B — the npm package</h3>
-      <pre class="code" data-lang="bash"><code>npm i @pulse/sdk</code></pre>
+      <p>Not on the npm registry yet — install straight from GitHub instead:</p>
+      <pre class="code" data-lang="bash"><code>npm install github:DevMello/pulse#sdk-dist
+# or: pnpm add github:DevMello/pulse#sdk-dist · yarn add github:DevMello/pulse#sdk-dist</code></pre>
       <pre class="code" data-lang="ts"><code>import { init, track, trackRevenue } from '@pulse/sdk';
 
 init({

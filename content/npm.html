@@ -1,7 +1,8 @@
 <section>
       <h2 id="install-npm">Install <code>@pulse/sdk</code><a class="anchor" href="#install-npm">#</a></h2>
-      <pre class="code" data-lang="bash"><code>npm i @pulse/sdk
-# or: pnpm add @pulse/sdk · yarn add @pulse/sdk · bun add @pulse/sdk</code></pre>
+      <pre class="code" data-lang="bash"><code>npm install github:DevMello/pulse#sdk-dist
+# or: pnpm add github:DevMello/pulse#sdk-dist · yarn add github:DevMello/pulse#sdk-dist</code></pre>
+      <p><code>@pulse/sdk</code> isn't published to the npm registry yet. The <code>sdk-dist</code> branch holds the prebuilt package and is kept in sync automatically on every release, so installing straight from GitHub gets you the exact same thing a registry install would — same package name, same import paths.</p>
       <p>The package ships ESM and CJS builds with TypeScript declarations, has <strong>no runtime dependencies</strong>, and is marked side-effect-free so bundlers tree-shake anything you don't import. It reimplements the transport rather than loading <code>px.js</code>, so bundler users pay for zero extra network requests.</p>
       <div class="tablewrap">
         <table>
