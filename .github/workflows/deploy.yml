@@ -34,11 +34,10 @@ jobs:
         id: pages
         # Computes the correct base path for this repo (e.g. "/pulse_docs" for a
         # project site, "" for a user/org site) and exposes it as base_path.
-        # enablement: true turns Pages on (build type = GitHub Actions) on the
-        # first run, so no manual Settings → Pages step is needed.
+        # Pages must already be enabled with build type "GitHub Actions"
+        # (Settings → Pages) — the workflow's GITHUB_TOKEN can't create the site
+        # itself, so `enablement` is left at its default.
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Install dependencies
         run: npm install
