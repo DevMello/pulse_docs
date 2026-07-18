@@ -146,6 +146,22 @@ function enhance(): void {
     });
   });
 
+  // ---- sidebar hash-item highlighting ------------------------------------
+  const sidebarLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.sidebar a[href*="#"]'));
+
+  const setSidebarFromHash = (hash: string) => {
+    sidebarLinks.forEach((a) => {
+      const linkHash = a.getAttribute('href')?.split('#')[1];
+      a.classList.toggle('active', linkHash === hash);
+    });
+  };
+
+  const hashFromLocation = () => location.hash.slice(1);
+  const currentHash = hashFromLocation();
+  if (currentHash) setSidebarFromHash(currentHash);
+
+  window.addEventListener('hashchange', () => setSidebarFromHash(hashFromLocation()));
+
   // ---- scrollspy for toc --------------------------------------------------
   const tocLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc a[href^="#"]'));
   const idOf = (a: HTMLAnchorElement) => (a.getAttribute('href') || '').slice(1);
@@ -161,6 +177,10 @@ function enhance(): void {
 
   const setActive = (id: string) => {
     tocLinks.forEach((a) => a.classList.toggle('active', idOf(a) === id));
+    sidebarLinks.forEach((a) => {
+      const linkHash = a.getAttribute('href')?.split('#')[1];
+      a.classList.toggle('active', linkHash === id);
+    });
   };
 
   let current: string | null = null;

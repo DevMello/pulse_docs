@@ -52,9 +52,7 @@ export function Shell({ currentPath, children }: ShellProps) {
               {group.items.map((item) => {
                 const href = itemHref(item);
                 const isCurrent =
-                  item.hash
-                    ? currentPath === item.href
-                    : currentPath === item.href;
+                  !item.hash && currentPath === item.href;
                 return (
                   <Link
                     key={item.label}
