@@ -24,4 +24,12 @@ track('signup', { plan: 'pro' });
 // Revenue
 trackRevenue('purchase', { amount: 29, currency: 'USD' }, { plan: 'pro' });</code></pre>
       <p>Calling <code>init()</code> starts automatic pageview tracking immediately. Everything else — events, revenue, framework helpers — builds on top of that.</p>
+
+      <h3>Option C — let your AI do it</h3>
+      <p>Pulse ships an <a class="link" href="https://github.com/DevMello/pulse/tree/main/skills/add-pulse-analytics">agent skill</a> — a playbook in the open <a class="link" href="https://agentskills.io">Agent Skills</a> format that teaches AI coding tools (Claude Code, Cursor, Codex and friends) how to integrate Pulse correctly. Install it in the project you want to track:</p>
+      <pre class="code" data-lang="bash"><code>npx skills add DevMello/pulse --skill add-pulse-analytics</code></pre>
+      <p>Then ask your agent in plain English:</p>
+      <pre class="code" data-lang="text"><code>Add Pulse analytics to this app. My instance is at
+https://your-pulse.vercel.app and the ingest key is YOUR_INGEST_KEY.</code></pre>
+      <p>The skill walks the agent through the whole job: detect your framework, pick the script tag or <code>@pulse/sdk</code>, wire the right adapter (React, Next.js App Router, Vue, Svelte/SvelteKit), avoid the classic double-pageview mistakes, and verify events actually reach your collector before calling it done.</p>
     </section>
